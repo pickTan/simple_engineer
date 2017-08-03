@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Access-Control-Allow-Origin" content="*">
+    <title>demo</title>
+</head>
+<script>
+    (function () {
+        //根据校正appVersion或userAgent校正屏幕分辨率宽度值
+        var regulateScreen = (function () {
+            var cache = {};
+            //默认尺寸
+            var defSize = {
+                width: window.screen.width,
+                height: window.screen.height
+            };
+            var ver = window.navigator.appVersion;
+            var _ = null;
+            var check = function (key) {
+                return key.constructor == String ? ver.indexOf(key) > -1 : ver.test(key);
+            };
+
+            var add = function (name, key, size) {
+                if (name && key)
+                    cache[name] = {
+                        key: key,
+                        size: size
+                    };
+            };
+
+            var del = function (name) {
+                if (cache[name])
+                    delete cache[name];
+            };
+            var cal = function () {
+                if (_ != null)
+                    return _;
+                for (var name in cache) {
+                    if (check(cache[name].key)) {
+                        _ = cache[name].size;
+                        break;
+                    }
+                }
+
+                if (_ == null)
+                    _ = defSize;
+
+                return _;
+            };
+
+            return {
+                add: add,
+                del: del,
+                cal: cal
+            };
+        })();
+        //实现缩放
+        var adapt = function (uiWidth) {
+            var
+                deviceWidth,
+                devicePixelRatio,
+                targetDensitydpi,
+                //meta,
+                initialContent,
+                head,
+                viewport = document.querySelector('[name="viewport"]'),
+                ua;
+            ua = navigator.userAgent.toLowerCase();
+            //whether it is the iPhone or iPad
+            isiOS = ua.indexOf('ipad') > -1 || ua.indexOf('iphone') > -1;
+            //获取设备信息,并矫正参数值
+            devicePixelRatio = window.devicePixelRatio;
+            deviceWidth = regulateScreen.cal().width;
+            //获取最终dpi
+            targetDensitydpi = deviceWidth / uiWidth;
+            initialContent = 'width=device-width,initial-scale=' + targetDensitydpi + ',maximum-scale=' + targetDensitydpi + ',minimum-scale=' + targetDensitydpi + ',user-scalable=no';
+            head = document.getElementsByTagName('head');
+            if (viewport) {
+                viewport.setAttribute('content', initialContent);
+            } else {
+                viewport = document.createElement('meta');
+                viewport.name = 'viewport';
+                viewport.content = initialContent;
+                head.length > 0 && head[head.length - 1].appendChild(viewport);
+            }
+        };
+
+        var init = function (uiWidth) {
+            window.addEventListener('resize', function () {
+                adapt(uiWidth)
+            })
+            return adapt(uiWidth);
+        }
+        return {
+            regulateScreen: regulateScreen,
+            init: init
+        };
+    })().init(720);
+</script>
+<style>
+    body {
+        overflow: hidden;
+        width: 100%;
+        height: 100%;
+    }
+
+    .ClipImgTap {
+        position: fixed;
+        height: 100vh;
+        width: 100vw;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        left: 0;
+        top: 0;
+        z-index: 2;
+    }
+
+    .ClipImgTap .ClipDiv {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        height: 600px;
+        width: 600px;
+        border: 2px solid white;
+        box-sizing: border-box;
+        overflow: hidden;
+        display: flex;
+        /*flex-wrap: wrap;*/
+        align-items: center;
+        justify-content: center;
+    }
+
+    .ClipImgTap .backDiv {
+        background-color: black;
+        min-height: 100vh;
+        min-width: 100vw;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .ClipImgTap .backDiv img {
+        -webkit-filter: blur(5px);
+    }
+
+    .ClipImgTap .CloseDiv {
+        position: absolute;
+        right: 20px;
+        background-color: black;
+        z-index: 21;
+        height: 40px;
+        width: 40px;
+        top: 40px;
+    }
+
+    .ClipImgTap .cli_btns {
+        position: absolute;
+        left: 0;
+        bottom: 0;
+        width: 100%;
+        display: flex;
+        height: 146px;
+    }
+
+    .ClipImgTap .cli_btns::before {
+        content: ' ';
+        position: absolute;
+        left: 0;
+        right: 0;
+        width: 100%;
+        height: 100%;
+        opacity: .6;
+        background-color: #000000;
+    }
+
+    .ClipImgTap .cli_btns .cli_commit, .ClipImgTap .cli_btns .cli_cancle {
+        flex: 1;
+        color: white;
+        line-height: 146px;
+        z-index: 1;
+        font-size: 34px;
+        padding: 0 60px;
+    }
+
+    .ClipImgTap .cli_btns .cli_commit {
+        text-align: right;
+    }
+
+
+
+    .content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 40px;
+    }
+    input {
+
+    }
+</style>
+
+<body>
+<div class="content">
+    <input type="file" id="test" accept="image/*"/>
+    <img id="showImag" width="600" height="600">
+    <h3 id="msg">我是标题</h3>
+</div>
+<script src="js/mobileCliImg.js"></script>
+<script>
+    (function () {
+        new ClipImg({
+            fileId: 'test',       //
+            width: 600,          // 截取图的长
+            height: 600,         // 截取图的高
+            showId: 'showImag',  // 预览图的id
+            format: 'png,jpg,jpeg', // 格式限定
+            targetDensitydpi: 1, //缩放比例,如果用rem布局，需计算出缩放比列
+            dealFun: function (res) {          //上传内置方法
+                switch (res.status) {
+                    case 0 ://读取图片中..增加loading状态
+                        console.log('0 正在读取图片...');
+                        alert('0 正在读取图片...');
+                        break;
+                    case 1 ://读取结束..取消loading状态
+                        console.log('1 读取图片结束...');
+                        alert('1 读取图片结束...');
+                        break;
+                    case 2 ://截图成功
+                        console.log('2 截图图片结束...');
+                        alert('2 截图图片结束...');
+                        console.log(res.blob);        //截图成功后的blob格式图片，可直接ajax上传
+                        console.log(res.base64);      //截图成功后的base64格式图片，可预览
+                        break;
+                    case 3 ://不符合格式，有format时才会执行
+                        console.log('3 格式错误，请上传格式的照片');
+                        alert('3 格式错误，请上传格式的照片');
+                        break;
+                    case 5 : //图片不够限定的长宽
+                        console.log('4 尺寸不足600*600哦');
+                        alert('5 尺寸不足600*600哦');
+                        break;
+                    case 6 : //图片截图呈现异常
+                        console.log('6 图片损害，请替换一张图片');
+                        alert('6 图片损害，请替换一张图片');
+                        break;
+                }
+            }
+        })
+    })()
+</script>
+</body>
+</html>
